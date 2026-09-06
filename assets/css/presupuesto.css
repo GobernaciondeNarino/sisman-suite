@@ -503,6 +503,32 @@
     margin: 0 0 0.4rem;
 }
 
+/* Leyenda del mapa de calor del avance. */
+.sysman-pre__leyenda {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1rem;
+    margin: 0.6rem 0 0;
+    padding: 0;
+    font-size: 0.8rem;
+    color: var(--pre-suave);
+}
+
+.sysman-pre__leyenda-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.sysman-pre__leyenda-color {
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 3px;
+    flex: 0 0 auto;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
 .sysman-pre--avance .sysman-pre__analisis {
     margin-top: 0.9rem;
     padding-top: 0.9rem;

@@ -296,6 +296,17 @@ sisman-suite/
 
 ## Changelog
 
+### 5.19.0 — Mapa de calor en el gráfico de avance
+`[sysman_gastos_avance]` y `[sysman_ingresos_avance]` pintan cada barra según lo ejecutado (o recaudado), no con un color plano.
+
+- **Escala institucional con degradados**: `#e7446c` por debajo del 50%, `#f18425` al 50%, `#f5c338` al 70%, `#06cf9a` justo en el 100% y `#4bc5d4` por encima. Entre paradas se interpola, así que el color dice *cuánto* falta y no solo en qué banda cae: un 85% sale verde claro, un 60% naranja-amarillo.
+- **Leyenda bajo el gráfico** con los cinco tramos: sin ella los colores no se interpretan.
+- **Texto legible sobre cada barra**: el porcentaje escrito dentro se pinta oscuro o claro según la luminancia del color, porque sobre amarillo el blanco no se lee.
+- **En líneas**, donde toda la serie comparte un color, se usa el del avance global.
+- **Color plano si el autor lo pide**: `colores="#348AFB"` desactiva el mapa de calor y su leyenda.
+- **Sin dato, gris** (`#c7ccd1`): una fila sin apropiación no es un avance del 0%, y pintarla de rojo diría lo que no es.
+- **Eje**: sigue siendo 0–100% salvo que algo supere el 100%, en cuyo caso pasa a 0–200% para que la barra no se salga del área dibujada.
+
 ### 5.18.0 — Ingresos agrupados por rubro
 La 5.17.0 hizo que Ingresos volviera a mostrar datos, pero agrupados por `fuenterecurso`, que en el sitio guarda un comodín (`99999999999999999999`): un único bloque con el 100%. Esta versión añade la agrupación que el área financiera usa de verdad.
 

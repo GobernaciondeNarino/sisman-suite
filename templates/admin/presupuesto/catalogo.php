@@ -95,14 +95,15 @@ $tarjetas = [
             ? __( 'Avance del recaudo', 'sysman-suite' )
             : __( 'Ejecución por dependencia (% de avance)', 'sysman-suite' ),
         'desc'    => $ingresos
-            ? __( 'Gráfico del porcentaje recaudado sobre el presupuesto definitivo, con su propia descripción y sus análisis. El porcentaje global es ponderado —recaudo total sobre presupuesto total—, no el promedio de los porcentajes. Con tipo="barras" (por defecto), "columnas" o "lineas".', 'sysman-suite' )
-            : __( 'Gráfico del porcentaje ejecutado —compromisos sobre apropiación vigente— por dependencia, con su propia descripción y sus análisis cualitativo y cuantitativo. El porcentaje global es ponderado, no el promedio de los porcentajes. Con tipo="barras" (por defecto), "columnas" o "lineas"; con dependencia="…" baja a los rubros de esa dependencia.', 'sysman-suite' ),
+            ? __( 'Gráfico del porcentaje recaudado sobre el presupuesto definitivo, con su propia descripción y sus análisis. El porcentaje global es ponderado —recaudo total sobre presupuesto total—, no el promedio de los porcentajes. Con tipo="barras" (por defecto), "columnas" o "lineas". Las barras se pintan como mapa de calor según el avance —rojo por debajo del 50%, naranja al 50%, amarillo al 70%, verde al 100% y azul por encima—, con su leyenda; para un color plano, use colores="#348AFB".', 'sysman-suite' )
+            : __( 'Gráfico del porcentaje ejecutado —compromisos sobre apropiación vigente— por dependencia, con su propia descripción y sus análisis cualitativo y cuantitativo. El porcentaje global es ponderado, no el promedio de los porcentajes. Con tipo="barras" (por defecto), "columnas" o "lineas"; con dependencia="…" baja a los rubros de esa dependencia. Las barras se pintan como mapa de calor según el avance —rojo por debajo del 50%, naranja al 50%, amarillo al 70%, verde al 100% y azul por encima—, con su leyenda; para un color plano, use colores="#348AFB".', 'sysman-suite' ),
         'codigos' => array_values( array_filter( [
             "[{$pre}_avance]",
             "[{$pre}_avance tipo=\"lineas\"]",
             $ingresos ? null : "[{$pre}_avance dependencia=\"{$ejemplo_val}\"]",
             "[{$pre}_avance analisis=\"descripcion,cualitativo,cuantitativo\"]",
             "[{$pre}_avance analisis=\"no\" limite=\"10\"]",
+            "[{$pre}_avance colores=\"#348AFB\"]",
         ] ) ),
     ],
     [

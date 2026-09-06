@@ -73,6 +73,66 @@
         }
     };
 
+    /* ── Mapa de calor del avance ─────────────────────────────────
+       Escala institucional: rojo por debajo del 50%, naranja al 50,
+       amarillo al 70, verde justo en el 100 y azul cuando se pasa.
+       Entre paradas se interpola, para que el color diga cuánto falta
+       y no solo en qué banda cae. */
+    var Heat = {
+        PARADAS: [
+            [0.00, [231, 68, 108]],   // #e7446c  — menos del 50%
+            [0.50, [241, 132, 37]],   // #f18425  — desde el 50%
+            [0.70, [245, 195, 56]],   // #f5c338  — más del 70%
+            [1.00, [6, 207, 154]],    // #06cf9a  — ejecutado al 100%
+            [1.20, [75, 197, 212]]    // #4bc5d4  — por encima del 100%
+        ],
+
+        color: function (frac) {
+            var v = parseFloat(frac);
+            if (isNaN(v)) { return '#c7ccd1'; }   // sin dato: gris, no rojo
+
+            var p = Heat.PARADAS;
+            if (v <= p[0][0]) { return Heat.hex(p[0][1]); }
+            if (v >= p[p.length - 1][0]) { return Heat.hex(p[p.length - 1][1]); }
+
+            for (var i = 1; i < p.length; i++) {
+                if (v <= p[i][0]) {
+                    var t = (v - p[i - 1][0]) / (p[i][0] - p[i - 1][0]);
+                    return Heat.hex([
+                        Math.round(p[i - 1][1][0] + t * (p[i][1][0] - p[i - 1][1][0])),
+                        Math.round(p[i - 1][1][1] + t * (p[i][1][1] - p[i - 1][1][1])),
+                        Math.round(p[i - 1][1][2] + t * (p[i][1][2] - p[i - 1][1][2]))
+                    ]);
+                }
+            }
+            return Heat.hex(p[p.length - 1][1]);
+        },
+
+        hex: function (rgb) {
+            return '#' + rgb.map(function (c) {
+                return ('0' + Math.max(0, Math.min(255, c)).toString(16)).slice(-2);
+            }).join('');
+        },
+
+        /** Texto legible sobre el color de la barra (amarillo pide texto oscuro). */
+        contraste: function (hex) {
+            var r = parseInt(hex.slice(1, 3), 16),
+                g = parseInt(hex.slice(3, 5), 16),
+                b = parseInt(hex.slice(5, 7), 16);
+            // Luminancia relativa aproximada, suficiente para elegir entre dos.
+            return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 150 ? '#1d2327' : '#ffffff';
+        },
+
+        /** Tramos con su etiqueta, para la leyenda bajo el gráfico. */
+        TRAMOS: [
+            [0.30, 'Menos del 50%'],
+            [0.60, 'Del 50% al 70%'],
+            [0.85, 'Del 70% al 100%'],
+            [1.00, 'Ejecutado al 100%'],
+            [1.20, 'Por encima del 100%']
+        ]
+    };
+
     function esc(str) {
         return String(str === null || str === undefined ? '' : str).replace(/[&<>"']/g, function (c) {
             return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -705,8 +765,15 @@
         var actual = cfg.valor || '';
         var clave = Coord.clave(cfg);
         var esIngresos = cfg.modulo === 'ingresos';
-        var color = (cfg.colores || '').split(',')[0].trim();
-        if (!/^#[0-9a-fA-F]{3,8}$/.test(color)) { color = '#348AFB'; }
+
+        // Por defecto el color lo pone el mapa de calor segun el avance. Si el
+        // autor fija un color en el shortcode, manda el suyo.
+        var colorFijo = (cfg.colores || '').split(',')[0].trim();
+        if (!/^#[0-9a-fA-F]{3,8}$/.test(colorFijo)) { colorFijo = ''; }
+
+        function colorDe(d) {
+            return colorFijo || Heat.color(d.pct);
+        }
 
         function render() {
             cargando(el);
@@ -796,12 +863,16 @@
                     ]
                 };
 
-                // El eje va en porcentaje y siempre de 0 a 100: con el dominio
-                // ajustado al maximo, un 40% ocupaba toda la barra y el grafico
-                // exageraba el avance.
+                // El eje va de 0 a 100%: con el dominio ajustado al maximo, un
+                // 40% ocupaba toda la barra y el grafico exageraba el avance.
+                // Si algo supera el 100%, el techo pasa al 200% — D3plus
+                // redondea cualquier dominio intermedio a esa cifra— para que
+                // la barra no se salga del area dibujada.
+                var maxPct = datos.reduce(function (m, d) { return Math.max(m, d.pct); }, 0);
+
                 var ejeY = {
                     title: meta.porcentaje_label || '% Ejecución',
-                    domain: [0, 1],
+                    domain: [0, maxPct > 1 ? 2 : 1],
                     tickFormat: function (d) { return Math.round(d * 100) + '%'; }
                 };
 
@@ -816,11 +887,29 @@
                         .data(datos)
                         .groupBy('grupo')
                         .select(lienzo)
-                        .color(function () { return color; })
                         .tooltipConfig(tooltip)
                         .legend(false)
                         .height(cfg.altura || 460)
                         .locale('es-ES');
+
+                    if (esLinea) {
+                        // Una linea tiene un solo color: se pinta con el del
+                        // avance global, que es el que resume la serie. Ojo:
+                        // .color() con una cadena la toma como nombre de campo,
+                        // no como color; tiene que ser una funcion.
+                        var globalPct = (meta.porcentaje === null || meta.porcentaje === undefined)
+                            ? null : parseFloat(meta.porcentaje);
+                        var colorLinea = colorFijo || Heat.color(globalPct);
+                        grafico.color(function () { return colorLinea; });
+                    } else {
+                        // El texto va dentro de la barra: sobre amarillo tiene
+                        // que ser oscuro para poder leerse.
+                        grafico.color(colorDe).shapeConfig({
+                            labelConfig: {
+                                fontColor: function (d) { return Heat.contraste(colorDe(d)); }
+                            }
+                        });
+                    }
 
                     if (ancho > 0) { grafico.width(ancho); }
 
@@ -871,6 +960,10 @@
                     });
                 }
 
+                if (!colorFijo) {
+                    c.appendChild(leyendaCalor());
+                }
+
                 // Textos que acompañan al grafico, en el mismo orden pedido.
                 (cfg.analisis || []).forEach(function (tipo) {
                     var caja = document.createElement('div');
@@ -899,6 +992,21 @@
             });
         }
         render();
+    }
+
+    /** Leyenda del mapa de calor: sin ella los colores no se interpretan. */
+    function leyendaCalor() {
+        var caja = document.createElement('ul');
+        caja.className = 'sysman-pre__leyenda';
+        caja.setAttribute('role', 'list');
+
+        caja.innerHTML = Heat.TRAMOS.map(function (t) {
+            return '<li class="sysman-pre__leyenda-item">'
+                + '<span class="sysman-pre__leyenda-color" style="background:' + Heat.color(t[0]) + '" aria-hidden="true"></span>'
+                + esc(t[1]) + '</li>';
+        }).join('');
+
+        return caja;
     }
 
     /* ── Arranque ─────────────────────────────────────────────── */
